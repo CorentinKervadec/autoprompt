@@ -520,8 +520,8 @@ def run_model(args):
         out_json = json.dumps(out)
         print(out_json)
         name_suffix = args.model_name.split("/")[1] if "/" in args.model_name else args.model_name
-        os.makedirs("results", exist_ok=True)
-        result_file_name = "results/{}_autoprompt_seed_{}.jsonl".format(name_suffix, args.seed)
+        os.makedirs(args.output, exist_ok=True)
+        result_file_name = "{}/{}_autoprompt_seed_{}.jsonl".format(args.output, name_suffix, args.seed)
         result_file = open(result_file_name,"a")
         result_file.write("{}\n".format(out_json))
         result_file.close()
@@ -533,7 +533,7 @@ if __name__ == '__main__':
     parser.add_argument('--dev', type=Path, required=True, help='Dev data path')
     parser.add_argument('--template', type=str, help='Template string')
     parser.add_argument('--label-map', type=str, default=None, help='JSON object defining label map')
-
+    parser.add_argument('--output', type=str, default='results', help='Template string')
     # LAMA-specific
     parser.add_argument('--tokenize-labels', action='store_true',
                         help='If specified labels are split into word pieces.'
