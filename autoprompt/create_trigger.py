@@ -10,7 +10,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import transformers
-from transformers import AutoConfig, AutoModelWithLMHead, AutoTokenizer
+from transformers import AutoConfig, AutoModelWithLMHead, AutoTokenizer, AutoModelForCausalLM
 from tqdm import tqdm
 import os
 
@@ -119,16 +119,24 @@ def load_pretrained(model_name):
     initialization steps to facilitate working with triggers.
     """
     config = AutoConfig.from_pretrained(model_name)
-    model = AutoModelWithLMHead.from_pretrained(model_name)
+    if 'opt' in model_name:
+        # AutoModelWithLMHead is deprecated for recent opt models
+        model = AutoModelForCausalLM.from_pretrained(model_name)
+    else:
+        model = AutoModelWithLMHead.from_pretrained(model_name)
     model.eval()
     if 'opt' in args.model_name:
         use_fast=False # because of a bug with the OPT tokenizer
+    else:
+        use_fast=True
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=use_fast)
     utils.add_task_specific_tokens(tokenizer)
     if not tokenizer.mask_token:
-        tokenizer.mask_token_id = tokenizer.eos_token
+        tokenizer.mask_token_id = tokenizer.eos_token_id
+        # tokenizer.mask_token_id = tokenizer.eos_token
     if not tokenizer.pad_token:
-        tokenizer.pad_token_id = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+        # tokenizer.mask_token_id = tokenizer.eos_token
     if config.model_type == 't5':
         tokenizer.mask_token = '<extra_id_0>' # sentinel token
     return config, model, tokenizer
