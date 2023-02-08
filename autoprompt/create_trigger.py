@@ -14,6 +14,10 @@ from transformers import AutoConfig, AutoModelWithLMHead, AutoTokenizer
 from tqdm import tqdm
 import os
 
+import sys
+sys.path.insert(0, "../autoprompt")
+
+
 import autoprompt.utils as utils
 
 
@@ -117,7 +121,9 @@ def load_pretrained(model_name):
     config = AutoConfig.from_pretrained(model_name)
     model = AutoModelWithLMHead.from_pretrained(model_name)
     model.eval()
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    if 'opt' in args.model_name:
+        use_fast=False # because of a bug with the OPT tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=use_fast)
     utils.add_task_specific_tokens(tokenizer)
     if not tokenizer.mask_token:
         tokenizer.mask_token_id = tokenizer.eos_token
@@ -144,6 +150,8 @@ def get_embeddings(model, config):
         embeddings = model.transformer.wte
     elif config.model_type == "t5":
         embeddings = model.encoder.embed_tokens
+    elif config.model_type == "opt":
+        embeddings = model.model.decoder.embed_tokens
     else:
         base_model = getattr(model, config.model_type)
         embeddings = base_model.embeddings.word_embeddings
@@ -199,7 +207,12 @@ def isupper(idx, tokenizer):
     # We only want to check tokens that begin words. Since byte-pair encoding
     # captures a prefix space, we need to check that the decoded token begins
     # with a space, and has a capitalized second character.
-    BPE_TOKENIZERS = ["facebook/bart-base", "facebook/bart-large","roberta-large", "roberta-base", "gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"]
+    BPE_TOKENIZERS = [
+        "facebook/bart-base", "facebook/bart-large",
+        "roberta-large", "roberta-base",
+        "gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl",
+        "facebook/opt-350m","facebook/opt-1.3b","facebook/opt-6.7b","facebook/opt-iml-max-1.3b"]
+
     if tokenizer.name_or_path in BPE_TOKENIZERS:
         decoded = tokenizer.decode([idx])
         if decoded[0] == ' ' and decoded[1].isupper():
@@ -214,7 +227,11 @@ def isupper(idx, tokenizer):
 def run_model(args):
 
     set_seed(args.seed)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    if args.device == 'cuda' and not torch.cuda.is_available():
+        logger.info('[CUDA-init] No CUDA available')
+        exit(0)
+    device = torch.device(args.device)
 
     logger.info('Loading model, tokenizer, etc.')
     config, model, tokenizer = load_pretrained(args.model_name)
@@ -545,6 +562,7 @@ if __name__ == '__main__':
     parser.add_argument('--sentence-size', type=int, default=50)
 
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--device', type=str, default='mps', help='Which computation device: cuda or mps')
     args = parser.parse_args()
 
     if args.debug:
