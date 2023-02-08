@@ -568,7 +568,7 @@ if __name__ == '__main__':
     parser.add_argument('--sentence-size', type=int, default=50)
 
     parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--device', type=str, default='mps', help='Which computation device: cuda or mps')
+    parser.add_argument('--device', type=str, default='cuda', help='Which computation device: cuda or mps')
     args = parser.parse_args()
 
     if args.debug:
