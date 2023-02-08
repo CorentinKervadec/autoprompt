@@ -133,10 +133,8 @@ def load_pretrained(model_name):
     utils.add_task_specific_tokens(tokenizer)
     if not tokenizer.mask_token:
         tokenizer.mask_token_id = tokenizer.eos_token_id
-        # tokenizer.mask_token_id = tokenizer.eos_token
     if not tokenizer.pad_token:
         tokenizer.pad_token_id = tokenizer.eos_token_id
-        # tokenizer.mask_token_id = tokenizer.eos_token
     if config.model_type == 't5':
         tokenizer.mask_token = '<extra_id_0>' # sentinel token
     return config, model, tokenizer
