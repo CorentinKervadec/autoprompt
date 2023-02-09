@@ -253,8 +253,24 @@ def run_model(args):
         label_map = None
         logger.info('No label map')
 
+    #
+    # CONSTRUCT TEMPLATE. MAJ by Corentk
+    # Only work for TRex facts retrieval
+    #
+    if args.template == '':
+        template=" [T]"*args.num_trigger_tokens # add triggers
+        template="{sub_label}"+ template + " [P]." # subject/object place holders
+        # Add BOS and EOS to the template
+        if 'bert' in args.model_name:
+            template = '[CLS] '+template+' [SEP]'
+        else:
+            template = tokenizer.bos_token+' '+template+' '+tokenizer.eos_token
+        ##
+    else:
+        template == args.template
+
     templatizer = utils.TriggerTemplatizer(
-        args.template,
+        template,
         config,
         tokenizer,
         label_map=label_map,
@@ -263,6 +279,8 @@ def run_model(args):
         add_special_tokens=False,
         use_ctx=args.use_ctx
     )
+
+    assert args.num_trigger_tokens == templatizer.num_trigger_tokens
 
     # Obtain the initial trigger tokens and label mapping
     if args.initial_trigger:
@@ -566,6 +584,7 @@ if __name__ == '__main__':
     parser.add_argument('--patience', type=int, default=5)
     parser.add_argument('--num-cand', type=int, default=10)
     parser.add_argument('--sentence-size', type=int, default=50)
+    parser.add_argument('--num_trigger_tokens', type=int, default=5)
 
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--device', type=str, default='cuda', help='Which computation device: cuda or mps')
