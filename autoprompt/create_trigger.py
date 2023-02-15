@@ -583,8 +583,7 @@ if __name__ == '__main__':
     parser.add_argument('--sentence-size', type=int, default=50)
     parser.add_argument('--num_trigger_tokens', type=int, default=5)
 
-    parser.add_argument('--fast_tokenizer', action='store_true',
-                        help='Use fast tokenizer')
+    parser.add_argument('--fast_tokenizer', type=int, default=0, help='Use fast tokenizer')
 
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--device', type=str, default='cuda', help='Which computation device: cuda or mps')
