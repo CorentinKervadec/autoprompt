@@ -54,8 +54,8 @@ class PredictWrapper:
         trigger_mask = model_inputs.pop('trigger_mask')
         predict_mask = model_inputs.pop('predict_mask')
         last_trigger_mask = model_inputs.pop('last_trigger_mask')
-        if "gpt2" in self._model.name_or_path:
-            predict_mask = last_trigger_mask # predict the last token for causal LMs 
+        # if "gpt2" in self._model.name_or_path: # Corentin: Why doing that?
+        #     predict_mask = last_trigger_mask # predict the last token for causal LMs 
         model_inputs = replace_trigger_tokens(model_inputs, trigger_ids, trigger_mask)
         if 't5' in self._model.name_or_path:
             model_inputs['labels'] =  model_inputs['input_ids'] 
@@ -119,17 +119,13 @@ def load_pretrained(model_name):
     initialization steps to facilitate working with triggers.
     """
     config = AutoConfig.from_pretrained(model_name)
-    if 'opt' in model_name:
+    if 'opt' in model_name or 'gpt2' in model_name:
         # AutoModelWithLMHead is deprecated for recent opt models
         model = AutoModelForCausalLM.from_pretrained(model_name)
     else:
         model = AutoModelWithLMHead.from_pretrained(model_name)
     model.eval()
-    if 'opt' in args.model_name:
-        use_fast=False # because of a bug with the OPT tokenizer
-    else:
-        use_fast=True
-    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=use_fast)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=args.fast_tokenizer)
     utils.add_task_specific_tokens(tokenizer)
     if not tokenizer.mask_token:
         tokenizer.mask_token_id = tokenizer.eos_token_id
@@ -258,14 +254,15 @@ def run_model(args):
     # Only work for TRex facts retrieval
     #
     if args.template == '':
-        template=" [T]"*args.num_trigger_tokens # add triggers
+        trigger_str = " [T]" if args.fast_tokenizer else " [T] " # because of a bug with not fast tokenizer
+        template=trigger_str*args.num_trigger_tokens # add triggers
         template="{sub_label}"+ template + " [P]." # subject/object place holders
         # Add BOS and EOS to the template
         if 'bert' in args.model_name:
-            template = '[CLS] '+template+' [SEP]'
-        else:
-            template = tokenizer.bos_token+' '+template+' '+tokenizer.eos_token
-        ##
+            template = '[CLS]'+template+'[SEP]'
+        # else:
+        #     template = ' '+template
+        #
     else:
         template == args.template
 
@@ -317,9 +314,9 @@ def run_model(args):
     dev_loader = DataLoader(dev_dataset, batch_size=args.eval_size, shuffle=False, collate_fn=collator)
 
     # To "filter" unwanted trigger tokens, we subtract a huge number from their logits.
-    tokenizer_vocab_size = tokenizer.vocab_size
-    if config.model_type == "t5": # implemetation details for t5
-        tokenizer_vocab_size = 32128
+    tokenizer_vocab_size = config.vocab_size #tokenizer.vocab_size
+    # if config.model_type == "t5": # implemetation details for t5
+    #     tokenizer_vocab_size = 32128
     filter = torch.zeros(tokenizer_vocab_size, dtype=torch.float32, device=device)
     
     if args.filter:
@@ -585,6 +582,9 @@ if __name__ == '__main__':
     parser.add_argument('--num-cand', type=int, default=10)
     parser.add_argument('--sentence-size', type=int, default=50)
     parser.add_argument('--num_trigger_tokens', type=int, default=5)
+
+    parser.add_argument('--fast_tokenizer', action='store_true',
+                        help='Use fast tokenizer')
 
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--device', type=str, default='cuda', help='Which computation device: cuda or mps')
