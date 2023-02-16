@@ -23,6 +23,38 @@ import autoprompt.utils as utils
 
 logger = logging.getLogger(__name__)
 
+LM_TYPE = {
+     "roberta-base":"masked",
+     "roberta-large":"masked",
+     "allenai/longformer-base-4096":"masked",
+     "allenai/longformer-large-4096":"masked",
+     "distilroberta-base":"masked",
+     "bert-base-cased":"masked",
+     "bert-large-cased":"masked",
+     "distilbert-base-cased":"masked",
+     "gpt2":"causal",
+     "gpt2-medium":"causal",
+     "gpt2-large":"causal",
+     "gpt2-xl":"causal",
+     "xlnet-base-cased":"causal",
+     "xlnet-large-cased":"causal",
+     "facebook/bart-base":"masked",
+     "facebook/bart-large":"masked",
+     "t5-small":"seq2seq",
+     "t5-base":"seq2seq",
+     "t5-large":"seq2seq",
+     "google/t5-v1_1-base":"seq2seq",
+     "facebook/opt-350m":"causal",
+     "facebook/opt-1.3b":"causal",
+     "facebook/opt-6.7b":"causal",
+     "facebook/opt-13b":"causal",
+     "facebook/opt-30b":"causal",
+     "facebook/opt-66b":"causal",
+     "facebook/opt-iml-max-30b":"causal",
+     "facebook/opt-iml-max-1.3b":"causal",
+     "facebook/galactica-6.7b":"causal",
+     "facebook/galactica-30b":"causal",
+ }
 
 class GradientStorage:
     """
@@ -54,8 +86,8 @@ class PredictWrapper:
         trigger_mask = model_inputs.pop('trigger_mask')
         predict_mask = model_inputs.pop('predict_mask')
         last_trigger_mask = model_inputs.pop('last_trigger_mask')
-        # if "gpt2" in self._model.name_or_path: # Corentin: Why doing that?
-        #     predict_mask = last_trigger_mask # predict the last token for causal LMs 
+        if LM_TYPE[self._model.name_or_path]=='causal':
+            predict_mask = last_trigger_mask # predict the last token for causal LMs 
         model_inputs = replace_trigger_tokens(model_inputs, trigger_ids, trigger_mask)
         if 't5' in self._model.name_or_path:
             model_inputs['labels'] =  model_inputs['input_ids'] 
