@@ -32,7 +32,7 @@ LM_TYPE = {
      "bert-base-cased":"masked",
      "bert-large-cased":"masked",
      "distilbert-base-cased":"masked",
-     "gpt2":"not_causal",
+     "gpt2":"causal", 
      "gpt2-medium":"causal",
      "gpt2-large":"causal",
      "gpt2-xl":"causal",
